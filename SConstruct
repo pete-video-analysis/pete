@@ -1,8 +1,10 @@
 #!python
 
+VariantDir('build', 'src', duplicate=False)
+
 opts = Variables([], ARGUMENTS)
 
-env = DefaultEnvironment()
+env = Environment()
 
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'build/'))
 opts.Add(PathVariable('target_name', 'The library name.', 'libpete', PathVariable.PathAccept))
@@ -10,7 +12,7 @@ opts.Add(PathVariable('target_name', 'The library name.', 'libpete', PathVariabl
 opts.Update(env)
 
 libs = ['m']
-sources = Glob('src/*.c')
+sources = Glob('build/*.c')
 
 env.Append(CPPPATH='include')
 env.Append(LIBS=libs)
