@@ -31,8 +31,9 @@
 
 extern uint64_t current_frame;
 
-extern void (*request_next_frame)();
-extern void (*send_struct)(void*, uint16_t, uint16_t);
+extern void (*pete_request_next_frame)();
+extern void (*pete_notify_flash)(FLASH* flash, uint16_t x, uint16_t y, bool is_red);
+extern void (*pete_notify_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red);
 
 extern VIDEO *video;
 
@@ -40,7 +41,6 @@ extern VIDEO *video;
 
 // API
 void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha);
-void pete_set_callbacks(void (*_request_next_frame), void (*_send_struct)(void*, uint16_t x, uint16_t y));
 void pete_receive_frame(uint8_t *data);
 
 // Internal

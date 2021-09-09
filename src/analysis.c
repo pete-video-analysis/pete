@@ -27,8 +27,9 @@
 
 VIDEO *video;
 uint64_t current_frame = 0;
-void (*request_next_frame)() = NULL;
-void (*send_struct)(void*, uint16_t x, uint16_t y) = NULL;
+void (*pete_request_next_frame)() = NULL;
+void (*pete_notify_flash)(FLASH* flash, uint16_t x, uint16_t y, bool is_red) = NULL;
+void (*pete_notify_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red) = NULL;
 
 void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
 {
@@ -38,12 +39,6 @@ void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_al
 	video->fps = fps;
 	video->has_alpha = has_alpha;
 	alloc_nodes(video);
-}
-
-void pete_set_callbacks(void (*_request_next_frame), void (*_send_struct)(void*, uint16_t x, uint16_t y))
-{
-	request_next_frame = _request_next_frame;
-	send_struct = _send_struct;
 }
 
 void pete_receive_frame(uint8_t *data)
@@ -67,8 +62,8 @@ void pete_receive_frame(uint8_t *data)
 	
 	}
 	current_frame++;
-	if(request_next_frame != NULL)
-		request_next_frame();
+	if(pete_request_next_frame != NULL)
+		pete_request_next_frame();
 }
 
 void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
@@ -147,11 +142,12 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 	(*flashes)[0][idx].start_frame = start;
 	(*flashes)[0][idx].end_frame = end;
 
-	if(send_struct != NULL)
+	if(pete_notify_flash != NULL)
 	{
 		uint16_t x = idx % video->width;
 		uint16_t y = (idx - x) / video->width;
-		send_struct(&((*flashes)[0][idx]), x, y);
+		FLASH *flash = &((*flashes)[0][idx]);
+		pete_notify_flash(flash, x, y, is_red);
 	}
 }
 
