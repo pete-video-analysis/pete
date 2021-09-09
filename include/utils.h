@@ -101,7 +101,4 @@ void free_video(VIDEO *video);
 double rgb8_to_gamma_corrected_rgb(uint8_t value);
 double rgb_to_luminance(double r, double g, double b);
 
-// JSON methods
-char* make_flash_json(int start_frame, int end_frame, bool is_red, int x, int y);
-
 #endif

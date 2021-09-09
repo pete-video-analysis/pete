@@ -105,22 +105,3 @@ double rgb_to_luminance(double r, double g, double b)
 {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-
-char* make_flash_json(int start_frame, int end_frame, bool is_red, int x, int y)
-{
-	static const char format_string[] =
-	"{\n"
-	"\t\"is_red\": %s,\n"
-	"\t\"x\": %u,\n"
-	"\t\"y\": %u,\n"
-	"\t\"start_frame\": %u,\n"
-	"\t\"end_frame\": %u\n"
-	"}";
-
-	char* is_red_string = is_red ? "true" : "false";
-	int length = snprintf(NULL, 0, format_string, is_red_string, x, y, start_frame, end_frame);
-
-	char* json = (char*)malloc((length+1)*sizeof(char));
-	snprintf(json, length+1, format_string, is_red_string, x, y, start_frame, end_frame);
-	return json;
-}

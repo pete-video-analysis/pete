@@ -28,7 +28,7 @@
 VIDEO *video;
 uint64_t current_frame = 0;
 void (*request_next_frame)() = NULL;
-void (*send_message)(char*) = NULL;
+void (*send_struct)(void*, uint16_t x, uint16_t y) = NULL;
 
 void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
 {
@@ -40,10 +40,10 @@ void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_al
 	alloc_nodes(video);
 }
 
-void pete_set_callbacks(void (*_request_next_frame), void (*_send_message)(char*))
+void pete_set_callbacks(void (*_request_next_frame), void (*_send_struct)(void*, uint16_t x, uint16_t y))
 {
 	request_next_frame = _request_next_frame;
-	send_message = _send_message;
+	send_struct = _send_struct;
 }
 
 void pete_receive_frame(uint8_t *data)
@@ -147,13 +147,11 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 	(*flashes)[0][idx].start_frame = start;
 	(*flashes)[0][idx].end_frame = end;
 
-	if(send_message != NULL)
+	if(send_struct != NULL)
 	{
-		int x = idx % video->width;
-		int y = (idx - x) / video->width;
-		char *message = make_flash_json(start, end, is_red, x, y);
-		send_message(message);
-		free(message);
+		uint16_t x = idx % video->width;
+		uint16_t y = (idx - x) / video->width;
+		send_struct(&((*flashes)[0][idx]), x, y);
 	}
 }
 

@@ -25,14 +25,14 @@
 #ifndef ANALYSIS_H
 #define ANALYSIS_H
 
-#include<utils.h>
+#include <utils.h>
 
 /*----------------------------------------------------------------------------*/
 
 extern uint64_t current_frame;
 
 extern void (*request_next_frame)();
-extern void (*send_message)(char*);
+extern void (*send_struct)(void*, uint16_t, uint16_t);
 
 extern VIDEO *video;
 
@@ -40,7 +40,7 @@ extern VIDEO *video;
 
 // API
 void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha);
-void pete_set_callbacks(void (*request_next_frame), void (*send_message)(char*));
+void pete_set_callbacks(void (*_request_next_frame), void (*_send_struct)(void*, uint16_t x, uint16_t y));
 void pete_receive_frame(uint8_t *data);
 
 // Internal
