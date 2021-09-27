@@ -49,6 +49,7 @@ bool is_luminance_transition(double low_val, double high_val);
 // bool is_red_transition(stuff lol);
 bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx);
 void push_flash(int start, int end, bool is_red, uint64_t idx);
+bool are_three_flashes_in_one_second(FLASH * (*flashes)[3], uint64_t idx);
 void push_transition(int start_frame, int end_frame, DIRECTION dir, bool is_red, uint64_t idx);
 void reset_nodes(int frame, double val, bool is_red, uint64_t idx);
 

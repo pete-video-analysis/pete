@@ -54,6 +54,13 @@ void alloc_nodes(VIDEO *video)
 
 		video->last_transitions_gen[i].start_frame = -1;
 		video->last_transitions_red[i].start_frame = -1;
+
+		// Initialize flashes with negative start frames
+		for(int j = 0; j < 3; j++)
+		{
+			video->flashes_gen[j][i].start_frame = -1;
+			video->flashes_red[j][i].start_frame = -1;
+		}
 	}
 }
 

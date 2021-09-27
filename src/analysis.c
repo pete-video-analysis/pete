@@ -61,7 +61,7 @@ void pete_receive_frame(uint8_t *data)
 		}
 	
 	}
-	
+
 	current_frame++;
 	if(pete_request_next_frame != NULL)
 		pete_request_next_frame();
@@ -150,6 +150,28 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 		FLASH *flash = &((*flashes)[0][idx]);
 		pete_notify_flash(flash, x, y, is_red);
 	}
+
+	if(are_three_flashes_in_one_second(flashes, idx) && pete_notify_three_flashes != NULL)
+	{
+		uint16_t x = idx % video->width;
+		uint16_t y = (idx - x) / video->width;
+		pete_notify_three_flashes((*flashes)[2][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
+	}
+}
+
+bool are_three_flashes_in_one_second(FLASH * (*flashes)[3], uint64_t idx)
+{
+	// Check if there have been 3 flashes before checking if they happened in one second
+	for(int i = 0; i < 3; i++)
+	{
+		// If start frame is negative for any flash, it means that there
+		// haven't been 3 flashes yet
+		if((*flashes)[i][idx].start_frame < 0) return false;
+	}
+
+	int time_span = (*flashes)[0][idx].end_frame - (*flashes)[2][idx].start_frame;
+
+	return time_span <= video->fps;
 }
 
 void push_transition(int start_frame, int end_frame, DIRECTION dir, bool is_red, uint64_t idx)
