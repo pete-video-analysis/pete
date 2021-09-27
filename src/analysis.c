@@ -61,6 +61,7 @@ void pete_receive_frame(uint8_t *data)
 		}
 	
 	}
+	
 	current_frame++;
 	if(pete_request_next_frame != NULL)
 		pete_request_next_frame();
@@ -78,17 +79,7 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	NODE *current_inc = &(video->inc_nodes_gen[idx]);
 	NODE *current_dec = &(video->dec_nodes_gen[idx]);
 	
-	if(relative_luminance >= current_inc->value)
-	{
-		current_inc->frame = current_frame;
-		current_inc->value = relative_luminance;
-	}
-
-	if(relative_luminance <= current_dec->value)
-	{
-		current_dec->frame = current_frame;
-		current_dec->value = relative_luminance;
-	}
+	
 
 	if(is_luminance_transition(current_dec->value, relative_luminance))
 	{	
@@ -111,7 +102,17 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 		reset_nodes(current_frame, relative_luminance, false, idx);
 	}
 
-	
+	if(relative_luminance >= current_inc->value)
+	{
+		current_inc->frame = current_frame;
+		current_inc->value = relative_luminance;
+	}
+
+	if(relative_luminance <= current_dec->value)
+	{
+		current_dec->frame = current_frame;
+		current_dec->value = relative_luminance;
+	}
 }
 
 bool is_luminance_transition(double low_val, double high_val)
