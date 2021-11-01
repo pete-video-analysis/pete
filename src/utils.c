@@ -39,7 +39,7 @@ void alloc_nodes(VIDEO *video)
 	video->last_transitions_gen = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
 	video->last_transitions_red = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
 
-	for(uint8_t i = 0; i < 3; i++)
+	for(uint8_t i = 0; i < 4; i++)
 	{
 		video->flashes_gen[i] = (FLASH*) malloc(video->width * video->height * sizeof(FLASH));
 		video->flashes_red[i] = (FLASH*) malloc(video->width * video->height * sizeof(FLASH));
@@ -71,7 +71,7 @@ void alloc_nodes(VIDEO *video)
 */
 void free_video(VIDEO *video)
 {
-	for(uint8_t i = 0; i < 3; i++)
+	for(uint8_t i = 0; i < 4; i++)
 	{
 		free(video->flashes_gen[i]);
 		free(video->flashes_red[i]);

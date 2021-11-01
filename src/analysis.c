@@ -29,7 +29,7 @@ VIDEO *video;
 uint64_t current_frame = 0;
 void (*pete_request_next_frame)() = NULL;
 void (*pete_notify_flash)(FLASH* flash, uint16_t x, uint16_t y, bool is_red) = NULL;
-void (*pete_notify_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red) = NULL;
+void (*pete_notify_over_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red) = NULL;
 
 void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
 {
@@ -78,8 +78,6 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	
 	NODE *current_inc = &(video->inc_nodes_gen[idx]);
 	NODE *current_dec = &(video->dec_nodes_gen[idx]);
-	
-	
 
 	if(is_luminance_transition(current_dec->value, relative_luminance))
 	{	
@@ -136,8 +134,9 @@ bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx)
 
 void push_flash(int start, int end, bool is_red, uint64_t idx)
 {
-	FLASH * (*flashes)[3] = is_red ? &(video->flashes_red) : &(video->flashes_gen);
+	FLASH * (*flashes)[4] = is_red ? &(video->flashes_red) : &(video->flashes_gen);
 
+	(*flashes)[3][idx] = (*flashes)[2][idx];
 	(*flashes)[2][idx] = (*flashes)[1][idx];
 	(*flashes)[1][idx] = (*flashes)[0][idx];
 	(*flashes)[0][idx].start_frame = start;
@@ -151,26 +150,26 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 		pete_notify_flash(flash, x, y, is_red);
 	}
 
-	if(are_three_flashes_in_one_second(flashes, idx) && pete_notify_three_flashes != NULL)
+	if(are_over_three_flashes_in_one_second(flashes, idx) && pete_notify_over_three_flashes != NULL)
 	{
 		uint16_t x = idx % video->width;
 		uint16_t y = (idx - x) / video->width;
-		pete_notify_three_flashes((*flashes)[2][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
+		pete_notify_over_three_flashes((*flashes)[4][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
 	}
 }
 
-bool are_three_flashes_in_one_second(FLASH * (*flashes)[3], uint64_t idx)
+bool are_over_three_flashes_in_one_second(FLASH * (*flashes)[4], uint64_t idx)
 {
 	// Check if there have been 3 flashes before checking if they happened in one second
-	for(int i = 0; i < 3; i++)
+	for(int i = 0; i < 4; i++)
 	{
 		// If start frame is negative for any flash, it means that there
 		// haven't been 3 flashes yet
 		if((*flashes)[i][idx].start_frame < 0) return false;
 	}
 
-	int time_span = (*flashes)[0][idx].end_frame - (*flashes)[2][idx].start_frame;
-
+	int time_span = (*flashes)[0][idx].end_frame - (*flashes)[3][idx].start_frame;
+	
 	return time_span <= video->fps;
 }
 

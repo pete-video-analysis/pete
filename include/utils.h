@@ -85,10 +85,10 @@ typedef struct VIDEO
 	TRANSITION *last_transitions_gen;
 	TRANSITION *last_transitions_red;
 
-	// The last 3 general flashes
-	FLASH *flashes_gen[3];
-	// The last 3 red flashes
-	FLASH *flashes_red[3];
+	// The last 4 general flashes
+	FLASH *flashes_gen[4];
+	// The last 4 red flashes
+	FLASH *flashes_red[4];
 } VIDEO;
 
 /*----------------------------------------------------------------------------*/
