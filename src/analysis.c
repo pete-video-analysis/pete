@@ -116,7 +116,7 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 bool is_luminance_transition(double low_val, double high_val)
 {
 	if(high_val == 0.0) return false;
-	return high_val - low_val >= 0.1*high_val && low_val < 0.8;
+	return high_val - low_val >= 0.1 && low_val < 0.8;
 }
 
 bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx)
