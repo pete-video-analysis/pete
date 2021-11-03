@@ -51,6 +51,9 @@ typedef struct NODE
 	int frame;
 
 	double value;
+
+	// Unused for general flashes
+	bool saturated_red;
 } NODE;
 
 typedef struct TRANSITION
@@ -79,6 +82,8 @@ typedef struct VIDEO
 	// and lowest points since the las transition
 	NODE *inc_nodes_gen, *dec_nodes_gen;
 	NODE *inc_nodes_red, *dec_nodes_red;
+	// Red nodes exclusively for saturated reds
+	NODE *inc_nodes_saturated_red, *dec_nodes_saturated_red;
 
 	// The last transition
 	// If its direction opposes a new transition, it's a flash
@@ -100,5 +105,7 @@ void free_video(VIDEO *video);
 // Color methods
 double rgb8_to_gamma_corrected_rgb(uint8_t value);
 double rgb_to_luminance(double r, double g, double b);
+double rgb_to_red_flash_val(double r, double g, double b);
+bool is_saturated_red(double r, double g, double b);
 
 #endif

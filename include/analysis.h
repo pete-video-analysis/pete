@@ -46,11 +46,10 @@ void pete_receive_frame(uint8_t *data);
 // Internal
 void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx);
 bool is_luminance_transition(double low_val, double high_val);
-// bool is_red_transition(stuff lol);
+bool is_red_transition(double low_val, bool low_sat, double high_val, bool high_sat);
 bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx);
 void push_flash(int start, int end, bool is_red, uint64_t idx);
 bool are_over_three_flashes_in_one_second(FLASH * (*flashes)[4], uint64_t idx);
 void push_transition(int start_frame, int end_frame, DIRECTION dir, bool is_red, uint64_t idx);
-void reset_nodes(int frame, double val, bool is_red, uint64_t idx);
 
 #endif

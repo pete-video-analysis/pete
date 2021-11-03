@@ -87,7 +87,13 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 		}
 
 		push_transition(current_dec->frame, current_frame, INC, false, idx);
-		reset_nodes(current_frame, relative_luminance, false, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = relative_luminance,
+			.saturated_red = false // unused
+		};
+		*current_dec = *current_inc = current;
 	}
 	else if(is_luminance_transition(relative_luminance, current_inc->value))
 	{
@@ -97,7 +103,13 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 		}
 
 		push_transition(current_inc->frame, current_frame, DEC, false, idx);
-		reset_nodes(current_frame, relative_luminance, false, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = relative_luminance,
+			.saturated_red = false // unused
+		};
+		*current_dec = *current_inc = current;
 	}
 
 	if(relative_luminance >= current_inc->value)
@@ -111,12 +123,129 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 		current_dec->frame = current_frame;
 		current_dec->value = relative_luminance;
 	}
+
+	// Red flashes
+	double red_flash_val = rgb_to_red_flash_val(R, G, B);
+	bool is_saturated = is_saturated_red(R, G, B);
+
+	current_inc = &(video->inc_nodes_red[idx]);
+	current_dec = &(video->dec_nodes_red[idx]);
+	NODE *current_saturated_inc = &(video->inc_nodes_saturated_red[idx]);
+	NODE *current_saturated_dec = &(video->dec_nodes_saturated_red[idx]);
+
+	if(is_red_transition(current_dec->value, current_dec->saturated_red, red_flash_val, is_saturated))
+	{
+		if(is_flash(INC, true, idx))
+		{
+			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+		}
+
+		push_transition(current_dec->frame, current_frame, INC, true, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = red_flash_val,
+			.saturated_red = is_saturated
+		};
+		*current_dec = *current_inc = current;
+		*current_saturated_dec = *current_saturated_inc = current;
+		current_saturated_dec->saturated_red = true;
+		current_saturated_inc->saturated_red = true;
+	}
+	else if(is_red_transition(red_flash_val, is_saturated, current_inc->value, current_inc->saturated_red))
+	{
+		if(is_flash(DEC, true, idx))
+		{
+			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+		}
+
+		push_transition(current_dec->frame, current_frame, DEC, true, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = red_flash_val,
+			.saturated_red = is_saturated
+		};
+		*current_dec = *current_inc = current;
+		*current_saturated_dec = *current_saturated_inc = current;
+		current_saturated_dec->saturated_red = true;
+		current_saturated_inc->saturated_red = true;
+	}
+	else if(is_red_transition(current_saturated_dec->value, true, red_flash_val, is_saturated))
+	{
+		if(is_flash(INC, true, idx))
+		{
+			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+		}
+
+		push_transition(current_dec->frame, current_frame, INC, true, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = red_flash_val,
+			.saturated_red = is_saturated
+		};
+		*current_dec = *current_inc = current;
+		*current_saturated_dec = *current_saturated_inc = current;
+		current_saturated_dec->saturated_red = true;
+		current_saturated_inc->saturated_red = true;
+	}
+	else if(is_red_transition(red_flash_val, is_saturated, current_saturated_inc->value, true))
+	{
+		if(is_flash(DEC, true, idx))
+		{
+			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+		}
+
+		push_transition(current_saturated_dec->frame, current_frame, DEC, true, idx);
+		// Reset nodes
+		NODE current = {
+			.frame = current_frame,
+			.value = red_flash_val,
+			.saturated_red = is_saturated
+		};
+		*current_dec = *current_inc = current;
+		*current_saturated_dec = *current_saturated_inc = current;
+		current_saturated_dec->saturated_red = true;
+		current_saturated_inc->saturated_red = true;
+	}
+
+	if(red_flash_val >= current_inc->value)
+	{
+		current_inc->frame = current_frame;
+		current_inc->value = red_flash_val;
+	}
+
+	if(red_flash_val <= current_dec->value)
+	{
+		current_dec->frame = current_frame;
+		current_dec->value = red_flash_val;
+	}
+
+	if(red_flash_val >= current_saturated_inc->value && is_saturated)
+	{
+		current_saturated_inc->frame = current_frame;
+		current_saturated_inc->value = red_flash_val;
+	}
+
+	if(red_flash_val <= current_saturated_dec->value && is_saturated)
+	{
+		current_saturated_dec->frame = current_frame;
+		current_saturated_dec->value = red_flash_val;
+	}
 }
 
 bool is_luminance_transition(double low_val, double high_val)
 {
 	if(high_val == 0.0) return false;
 	return high_val - low_val >= 0.1 && low_val < 0.8;
+}
+
+bool is_red_transition(double low_val, bool low_sat, double high_val, bool high_sat)
+{
+	if(high_val == 0.0) return false;
+	if(!low_sat && !high_sat) return false;
+	return high_val - low_val > 20.0;
 }
 
 bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx)
@@ -154,7 +283,7 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 	{
 		uint16_t x = idx % video->width;
 		uint16_t y = (idx - x) / video->width;
-		pete_notify_over_three_flashes((*flashes)[4][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
+		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
 	}
 }
 
@@ -180,15 +309,4 @@ void push_transition(int start_frame, int end_frame, DIRECTION dir, bool is_red,
 	last_transitions[idx].start_frame = start_frame;
 	last_transitions[idx].end_frame = end_frame;
 	last_transitions[idx].direction = dir;
-}
-
-void reset_nodes(int frame, double val, bool is_red, uint64_t idx)
-{
-	NODE *inc_nodes = is_red ? video->inc_nodes_red : video->inc_nodes_gen;
-	NODE *dec_nodes = is_red ? video->dec_nodes_red : video->dec_nodes_gen;
-
-	inc_nodes[idx].frame = frame;
-	inc_nodes[idx].value = val;
-	dec_nodes[idx].frame = frame;
-	dec_nodes[idx].value = val;
 }

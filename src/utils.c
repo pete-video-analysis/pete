@@ -32,12 +32,14 @@
 void alloc_nodes(VIDEO *video)
 {
 	// Alocate as many nodes and flashes as pixels per frame.
-	video->inc_nodes_gen        = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->dec_nodes_gen        = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->inc_nodes_red        = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->dec_nodes_red        = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->last_transitions_gen = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
-	video->last_transitions_red = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
+	video->inc_nodes_gen           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->dec_nodes_gen           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->inc_nodes_red           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->dec_nodes_red           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->inc_nodes_saturated_red = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->dec_nodes_saturated_red = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
+	video->last_transitions_gen    = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
+	video->last_transitions_red    = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
 
 	for(uint8_t i = 0; i < 4; i++)
 	{
@@ -51,6 +53,7 @@ void alloc_nodes(VIDEO *video)
 		// down nodes at the start
 		video->dec_nodes_gen[i].value = 1.1;
 		video->dec_nodes_red[i].value = 1.1;
+		video->dec_nodes_saturated_red[i].value = 1.1;
 
 		video->last_transitions_gen[i].start_frame = -1;
 		video->last_transitions_red[i].start_frame = -1;
@@ -80,6 +83,8 @@ void free_video(VIDEO *video)
 	free(video->dec_nodes_gen);
 	free(video->inc_nodes_red);
 	free(video->dec_nodes_red);
+	free(video->inc_nodes_saturated_red);
+	free(video->dec_nodes_saturated_red);
 	free(video->last_transitions_gen);
 	free(video->last_transitions_red);
 	free(video);
@@ -111,4 +116,30 @@ double rgb8_to_gamma_corrected_rgb(uint8_t value)
 double rgb_to_luminance(double r, double g, double b)
 {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/*
+	Calculates the value whose change is measured in testing for red flashes.
+	parameters:
+		r: gamma corrected R value
+		g: gamma corrected G value
+		b: gamma corrected B value
+	returns: the aforementioned value, max(0, (r-g-b)*320))
+*/
+double rgb_to_red_flash_val(double r, double g, double b)
+{
+	return fmax(0, (r-g-b)*320);
+}
+
+/*
+	Returns whether the given RGB color counts as a saturated red
+	parameters:
+		r: gamma corrected R value
+		g: gamma corrected G value
+		b: gamma corrected B value
+	returns: true if it's a saturated red and false if it's not
+*/
+bool is_saturated_red(double r, double g, double b)
+{
+	return r / (r+g+b) >= 0.8;
 }
