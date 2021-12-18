@@ -25,69 +25,69 @@
 #include <utils.h>
 
 /*
-	Allocates the nodes pointers in a video struct.
+	Allocates the nodes pointers in a ctx struct.
 	parameters:
-		video: pointer to the video struct
+		ctx: pointer to the context struct
 */
-void alloc_nodes(VIDEO *video)
+void alloc_nodes(PETE_CTX *ctx)
 {
 	// Alocate as many nodes and flashes as pixels per frame.
-	video->inc_nodes_gen           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->dec_nodes_gen           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->inc_nodes_red           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->dec_nodes_red           = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->inc_nodes_saturated_red = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->dec_nodes_saturated_red = (NODE*)       malloc(video->width * video->height * sizeof(NODE));
-	video->last_transitions_gen    = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
-	video->last_transitions_red    = (TRANSITION*) malloc(video->width * video->height * sizeof(TRANSITION));
+	ctx->inc_nodes_gen           = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->dec_nodes_gen           = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->inc_nodes_red           = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->dec_nodes_red           = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->inc_nodes_saturated_red = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->dec_nodes_saturated_red = (struct NODE*)       malloc(ctx->width * ctx->height * sizeof(struct NODE));
+	ctx->last_transitions_gen    = (struct TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct TRANSITION));
+	ctx->last_transitions_red    = (struct TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct TRANSITION));
 
 	for(uint8_t i = 0; i < 4; i++)
 	{
-		video->flashes_gen[i] = (FLASH*) malloc(video->width * video->height * sizeof(FLASH));
-		video->flashes_red[i] = (FLASH*) malloc(video->width * video->height * sizeof(FLASH));
+		ctx->flashes_gen[i] = (struct FLASH*) malloc(ctx->width * ctx->height * sizeof(struct FLASH));
+		ctx->flashes_red[i] = (struct FLASH*) malloc(ctx->width * ctx->height * sizeof(struct FLASH));
 	}
 
-	for (uint64_t i = 0; i < video->width * video->height; i++)
+	for (uint64_t i = 0; i < ctx->width * ctx->height; i++)
 	{
 		// Ensure that any valid node is lower than the
 		// down nodes at the start
-		video->dec_nodes_gen[i].value = 1.1;
-		video->dec_nodes_red[i].value = 1.1;
-		video->dec_nodes_saturated_red[i].value = 1.1;
+		ctx->dec_nodes_gen[i].value = 1.1;
+		ctx->dec_nodes_red[i].value = 1.1;
+		ctx->dec_nodes_saturated_red[i].value = 1.1;
 
-		video->last_transitions_gen[i].start_frame = -1;
-		video->last_transitions_red[i].start_frame = -1;
+		ctx->last_transitions_gen[i].start_frame = -1;
+		ctx->last_transitions_red[i].start_frame = -1;
 
 		// Initialize flashes with negative start frames
 		for(int j = 0; j < 3; j++)
 		{
-			video->flashes_gen[j][i].start_frame = -1;
-			video->flashes_red[j][i].start_frame = -1;
+			ctx->flashes_gen[j][i].start_frame = -1;
+			ctx->flashes_red[j][i].start_frame = -1;
 		}
 	}
 }
 
 /*
-	Frees the nodes pointers in a video struct before freeing the video itself.
+	Frees the nodes pointers in a ctx struct before freeing the ctx itself.
 	parameters:
-		video: pointer to the video struct
+		ctx: pointer to the context struct
 */
-void free_video(VIDEO *video)
+void free_ctx(PETE_CTX *ctx)
 {
 	for(uint8_t i = 0; i < 4; i++)
 	{
-		free(video->flashes_gen[i]);
-		free(video->flashes_red[i]);
+		free(ctx->flashes_gen[i]);
+		free(ctx->flashes_red[i]);
 	}
-	free(video->inc_nodes_gen);
-	free(video->dec_nodes_gen);
-	free(video->inc_nodes_red);
-	free(video->dec_nodes_red);
-	free(video->inc_nodes_saturated_red);
-	free(video->dec_nodes_saturated_red);
-	free(video->last_transitions_gen);
-	free(video->last_transitions_red);
-	free(video);
+	free(ctx->inc_nodes_gen);
+	free(ctx->dec_nodes_gen);
+	free(ctx->inc_nodes_red);
+	free(ctx->dec_nodes_red);
+	free(ctx->inc_nodes_saturated_red);
+	free(ctx->dec_nodes_saturated_red);
+	free(ctx->last_transitions_gen);
+	free(ctx->last_transitions_red);
+	free(ctx);
 }
 
 /*

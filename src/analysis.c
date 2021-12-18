@@ -25,49 +25,49 @@
 #include <analysis.h>
 #include <stdio.h>
 
-VIDEO *video;
-uint64_t current_frame = 0;
-void (*pete_request_next_frame)() = NULL;
-void (*pete_notify_flash)(FLASH* flash, uint16_t x, uint16_t y, bool is_red) = NULL;
-void (*pete_notify_over_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red) = NULL;
+void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
+void (*pete_notify_flash)(struct FLASH* flash, uint16_t x, uint16_t y, bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_over_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red, PETE_CTX *ctx) = NULL;
 
-void pete_set_metadata(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
+PETE_CTX *pete_create_context(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
 {
-	video = (VIDEO*)malloc(sizeof(VIDEO));
-	video->width = width;
-	video->height = height;
-	video->fps = fps;
-	video->has_alpha = has_alpha;
-	alloc_nodes(video);
+	PETE_CTX *ctx = (PETE_CTX*)malloc(sizeof(PETE_CTX));
+	ctx->width = width;
+	ctx->height = height;
+	ctx->fps = fps;
+	ctx->has_alpha = has_alpha;
+	alloc_nodes(ctx);
+	return ctx;
 }
 
-void pete_receive_frame(uint8_t *data)
+void pete_receive_frame(uint8_t *data, PETE_CTX *ctx)
 {
-	uint64_t channels = video->has_alpha ? 4 : 3;
+	uint64_t channels = ctx->has_alpha ? 4 : 3;
 	// Process each pixel
-	for(uint64_t y = 0; y < video->height; y++)
+	for(uint64_t y = 0; y < ctx->height; y++)
 	{
-		for(uint64_t x = 0; x < video->width; x++)
+		for(uint64_t x = 0; x < ctx->width; x++)
 		{
-			uint64_t node_index = (y * (uint64_t)video->width) + x;
+			uint64_t node_index = (y * (uint64_t)ctx->width) + x;
 			uint64_t data_index = node_index * channels;
 
 			process_pixel(
 				data[data_index+RED],
 				data[data_index+GREEN],
 				data[data_index+BLUE],
-				node_index
+				node_index,
+				ctx
 			);
 		}
 	
 	}
 
-	current_frame++;
+	ctx->current_frame++;
 	if(pete_request_next_frame != NULL)
-		pete_request_next_frame();
+		pete_request_next_frame(ctx);
 }
 
-void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
+void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx, PETE_CTX *ctx)
 {
 	double R = rgb8_to_gamma_corrected_rgb(red);
 	double G = rgb8_to_gamma_corrected_rgb(green);
@@ -76,20 +76,20 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	// General flashes
 	double relative_luminance = rgb_to_luminance(R, G, B);
 	
-	NODE *current_inc = &(video->inc_nodes_gen[idx]);
-	NODE *current_dec = &(video->dec_nodes_gen[idx]);
+	struct NODE *current_inc = &(ctx->inc_nodes_gen[idx]);
+	struct NODE *current_dec = &(ctx->dec_nodes_gen[idx]);
 
 	if(is_luminance_transition(current_dec->value, relative_luminance))
 	{	
-		if(is_flash(INC, false, idx))
+		if(is_flash(PETE_DIR_INC, false, idx, ctx))
 		{
-			push_flash(video->last_transitions_gen[idx].start_frame, current_frame, false, idx);
+			push_flash(ctx->last_transitions_gen[idx].start_frame, ctx->current_frame, false, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, current_frame, INC, false, idx);
+		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, false, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = relative_luminance,
 			.saturated_red = false // unused
 		};
@@ -97,15 +97,15 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	}
 	else if(is_luminance_transition(relative_luminance, current_inc->value))
 	{
-		if(is_flash(DEC, false, idx))
+		if(is_flash(PETE_DIR_DEC, false, idx, ctx))
 		{
-			push_flash(video->last_transitions_gen[idx].start_frame, current_frame, false, idx);
+			push_flash(ctx->last_transitions_gen[idx].start_frame, ctx->current_frame, false, idx, ctx);
 		}
 
-		push_transition(current_inc->frame, current_frame, DEC, false, idx);
+		push_transition(current_inc->frame, ctx->current_frame, PETE_DIR_DEC, false, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = relative_luminance,
 			.saturated_red = false // unused
 		};
@@ -114,13 +114,13 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 
 	if(relative_luminance >= current_inc->value)
 	{
-		current_inc->frame = current_frame;
+		current_inc->frame = ctx->current_frame;
 		current_inc->value = relative_luminance;
 	}
 
 	if(relative_luminance <= current_dec->value)
 	{
-		current_dec->frame = current_frame;
+		current_dec->frame = ctx->current_frame;
 		current_dec->value = relative_luminance;
 	}
 
@@ -128,22 +128,22 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	double red_flash_val = rgb_to_red_flash_val(R, G, B);
 	bool is_saturated = is_saturated_red(R, G, B);
 
-	current_inc = &(video->inc_nodes_red[idx]);
-	current_dec = &(video->dec_nodes_red[idx]);
-	NODE *current_saturated_inc = &(video->inc_nodes_saturated_red[idx]);
-	NODE *current_saturated_dec = &(video->dec_nodes_saturated_red[idx]);
+	current_inc = &(ctx->inc_nodes_red[idx]);
+	current_dec = &(ctx->dec_nodes_red[idx]);
+	struct NODE *current_saturated_inc = &(ctx->inc_nodes_saturated_red[idx]);
+	struct NODE *current_saturated_dec = &(ctx->dec_nodes_saturated_red[idx]);
 
 	if(is_red_transition(current_dec->value, current_dec->saturated_red, red_flash_val, is_saturated))
 	{
-		if(is_flash(INC, true, idx))
+		if(is_flash(PETE_DIR_INC, true, idx, ctx))
 		{
-			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, current_frame, INC, true, idx);
+		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, true, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
@@ -154,15 +154,15 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	}
 	else if(is_red_transition(red_flash_val, is_saturated, current_inc->value, current_inc->saturated_red))
 	{
-		if(is_flash(DEC, true, idx))
+		if(is_flash(PETE_DIR_DEC, true, idx, ctx))
 		{
-			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, current_frame, DEC, true, idx);
+		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_DEC, true, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
@@ -173,15 +173,15 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	}
 	else if(is_red_transition(current_saturated_dec->value, true, red_flash_val, is_saturated))
 	{
-		if(is_flash(INC, true, idx))
+		if(is_flash(PETE_DIR_INC, true, idx, ctx))
 		{
-			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, current_frame, INC, true, idx);
+		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, true, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
@@ -192,15 +192,15 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 	}
 	else if(is_red_transition(red_flash_val, is_saturated, current_saturated_inc->value, true))
 	{
-		if(is_flash(DEC, true, idx))
+		if(is_flash(PETE_DIR_DEC, true, idx, ctx))
 		{
-			push_flash(video->last_transitions_red[idx].start_frame, current_frame, true, idx);
+			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
 		}
 
-		push_transition(current_saturated_dec->frame, current_frame, DEC, true, idx);
+		push_transition(current_saturated_dec->frame, ctx->current_frame, PETE_DIR_DEC, true, idx, ctx);
 		// Reset nodes
-		NODE current = {
-			.frame = current_frame,
+		struct NODE current = {
+			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
@@ -212,25 +212,25 @@ void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx)
 
 	if(red_flash_val >= current_inc->value)
 	{
-		current_inc->frame = current_frame;
+		current_inc->frame = ctx->current_frame;
 		current_inc->value = red_flash_val;
 	}
 
 	if(red_flash_val <= current_dec->value)
 	{
-		current_dec->frame = current_frame;
+		current_dec->frame = ctx->current_frame;
 		current_dec->value = red_flash_val;
 	}
 
 	if(red_flash_val >= current_saturated_inc->value && is_saturated)
 	{
-		current_saturated_inc->frame = current_frame;
+		current_saturated_inc->frame = ctx->current_frame;
 		current_saturated_inc->value = red_flash_val;
 	}
 
 	if(red_flash_val <= current_saturated_dec->value && is_saturated)
 	{
-		current_saturated_dec->frame = current_frame;
+		current_saturated_dec->frame = ctx->current_frame;
 		current_saturated_dec->value = red_flash_val;
 	}
 }
@@ -248,9 +248,9 @@ bool is_red_transition(double low_val, bool low_sat, double high_val, bool high_
 	return high_val - low_val > 20.0;
 }
 
-bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx)
+bool is_flash(PETE_DIR current_transition_direction, bool is_red, uint64_t idx, PETE_CTX *ctx)
 {
-	TRANSITION last_transition = is_red ? video->last_transitions_red[idx] : video->last_transitions_gen[idx];
+	struct TRANSITION last_transition = is_red ? ctx->last_transitions_red[idx] : ctx->last_transitions_gen[idx];
 
 	if(last_transition.direction == current_transition_direction)
 		return false;
@@ -261,9 +261,9 @@ bool is_flash(DIRECTION current_transition_direction, bool is_red, uint64_t idx)
 	return true;
 }
 
-void push_flash(int start, int end, bool is_red, uint64_t idx)
+void push_flash(int start, int end, bool is_red, uint64_t idx, PETE_CTX *ctx)
 {
-	FLASH * (*flashes)[4] = is_red ? &(video->flashes_red) : &(video->flashes_gen);
+	struct FLASH * (*flashes)[4] = is_red ? &(ctx->flashes_red) : &(ctx->flashes_gen);
 
 	(*flashes)[3][idx] = (*flashes)[2][idx];
 	(*flashes)[2][idx] = (*flashes)[1][idx];
@@ -273,21 +273,21 @@ void push_flash(int start, int end, bool is_red, uint64_t idx)
 
 	if(pete_notify_flash != NULL)
 	{
-		uint16_t x = idx % video->width;
-		uint16_t y = (idx - x) / video->width;
-		FLASH *flash = &((*flashes)[0][idx]);
-		pete_notify_flash(flash, x, y, is_red);
+		uint16_t x = idx % ctx->width;
+		uint16_t y = (idx - x) / ctx->width;
+		struct FLASH *flash = &((*flashes)[0][idx]);
+		pete_notify_flash(flash, x, y, is_red, ctx);
 	}
 
-	if(are_over_three_flashes_in_one_second(flashes, idx) && pete_notify_over_three_flashes != NULL)
+	if(are_over_three_flashes_in_one_second(flashes, idx, ctx) && pete_notify_over_three_flashes != NULL)
 	{
-		uint16_t x = idx % video->width;
-		uint16_t y = (idx - x) / video->width;
-		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red);
+		uint16_t x = idx % ctx->width;
+		uint16_t y = (idx - x) / ctx->width;
+		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red, ctx);
 	}
 }
 
-bool are_over_three_flashes_in_one_second(FLASH * (*flashes)[4], uint64_t idx)
+bool are_over_three_flashes_in_one_second(struct FLASH * (*flashes)[4], uint64_t idx, PETE_CTX *ctx)
 {
 	// Check if there have been 3 flashes before checking if they happened in one second
 	for(int i = 0; i < 4; i++)
@@ -299,12 +299,12 @@ bool are_over_three_flashes_in_one_second(FLASH * (*flashes)[4], uint64_t idx)
 
 	int time_span = (*flashes)[0][idx].end_frame - (*flashes)[3][idx].start_frame;
 	
-	return time_span <= video->fps;
+	return time_span <= ctx->fps;
 }
 
-void push_transition(int start_frame, int end_frame, DIRECTION dir, bool is_red, uint64_t idx)
+void push_transition(int start_frame, int end_frame, PETE_DIR dir, bool is_red, uint64_t idx, PETE_CTX *ctx)
 {
-	TRANSITION *last_transitions = is_red ? video->last_transitions_red : video->last_transitions_gen;
+	struct TRANSITION *last_transitions = is_red ? ctx->last_transitions_red : ctx->last_transitions_gen;
 
 	last_transitions[idx].start_frame = start_frame;
 	last_transitions[idx].end_frame = end_frame;

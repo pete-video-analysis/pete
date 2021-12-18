@@ -32,9 +32,9 @@
 #include <math.h>
 
 // Used define bool instead of enum for performance
-#define DIRECTION bool
-#define INC true
-#define DEC false
+#define PETE_DIR bool
+#define PETE_DIR_INC true
+#define PETE_DIR_DEC false
 
 enum channels
 {
@@ -46,7 +46,7 @@ enum channels
 
 /*----------------------------------------------------------------------------*/
 
-typedef struct NODE
+struct NODE
 {
 	int frame;
 
@@ -54,53 +54,56 @@ typedef struct NODE
 
 	// Unused for general flashes
 	bool saturated_red;
-} NODE;
+};
 
-typedef struct TRANSITION
+struct TRANSITION
 {
 	int start_frame, end_frame;
 
-	DIRECTION direction;
-} TRANSITION;
+	PETE_DIR direction;
+};
 
-typedef struct FLASH
+struct FLASH
 {
 	int start_frame, end_frame;
-} FLASH;
+};
 
-typedef struct VIDEO
+typedef struct PETE_CTX
 {
 	uint16_t width, height;
 
 	// For non-integer fps, round up to the nearest integer
 	uint8_t fps;
 
+	// The current frame
+	uint64_t current_frame;
+
 	// Whether the frames will include an alpha channel or not
 	bool has_alpha;
 
 	// Nodes used as running counters of the highest
 	// and lowest points since the las transition
-	NODE *inc_nodes_gen, *dec_nodes_gen;
-	NODE *inc_nodes_red, *dec_nodes_red;
+	struct NODE *inc_nodes_gen, *dec_nodes_gen;
+	struct NODE *inc_nodes_red, *dec_nodes_red;
 	// Red nodes exclusively for saturated reds
-	NODE *inc_nodes_saturated_red, *dec_nodes_saturated_red;
+	struct NODE *inc_nodes_saturated_red, *dec_nodes_saturated_red;
 
 	// The last transition
 	// If its direction opposes a new transition, it's a flash
-	TRANSITION *last_transitions_gen;
-	TRANSITION *last_transitions_red;
+	struct TRANSITION *last_transitions_gen;
+	struct TRANSITION *last_transitions_red;
 
 	// The last 4 general flashes
-	FLASH *flashes_gen[4];
+	struct FLASH *flashes_gen[4];
 	// The last 4 red flashes
-	FLASH *flashes_red[4];
-} VIDEO;
+	struct FLASH *flashes_red[4];
+} PETE_CTX;
 
 /*----------------------------------------------------------------------------*/
 
 // Video methods
-void alloc_nodes(VIDEO *video);
-void free_video(VIDEO *video);
+void alloc_nodes(PETE_CTX *ctx);
+void free_video(PETE_CTX *ctx);
 
 // Color methods
 double rgb8_to_gamma_corrected_rgb(uint8_t value);
