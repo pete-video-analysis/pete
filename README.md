@@ -8,17 +8,12 @@ In this repository resides the main engine. It can't be run on its own, it's a l
 
 ## Building
 
-**WARNING: Building on platforms other than linux has not been tested. Please report any errors you find if yout try.**
+**WARNING: Building only works on linux so far. Feel free to contribute with a build system for your platform and/or report errors.**
 
-Currently, Pete uses the [Scons](https://scons.org/) build system.
+Currently, Pete uses the [Make](https://www.gnu.org/software/make/) build system.
 
-In the root directory run `scons`.
-The different build options are:
-  - `-use_PIC=[True/False]` use position independent code. Default is `False`.
-  - `-target_path=[path]` the path where the compiled binary will be placed. Default is `build/`.
-  - `-target_name=[name]` the name the compiled binary file will be given. Default is `libpete`.
-
-Currently the build system only supports compiling to a static library.
-If you want to use it as a dynamic library, check out the hacky [bash script](https://github.com/pete-video-analysis/pypete/blob/main/build.sh) in the pypete repository.
-
-In the near future I plan on switching to the [Make](https://www.gnu.org/software/make/) build system.
+ - Static library: run `make static`
+ - Shared library: run `make shared`
+ - Both: run `make all`
+ - Only the object files: run `make objects`
+ - Remove all the build results: run `make clean`
