@@ -54,13 +54,13 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 	ctx->last_transitions_gen    = (struct PETE_TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct PETE_TRANSITION));
 	ctx->last_transitions_red    = (struct PETE_TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct PETE_TRANSITION));
 
-	for(uint8_t i = 0; i < 4; i++)
+	for(uint8_t i = 0; i < 4; ++i)
 	{
 		ctx->flashes_gen[i] = (struct PETE_FLASH*) malloc(ctx->width * ctx->height * sizeof(struct PETE_FLASH));
 		ctx->flashes_red[i] = (struct PETE_FLASH*) malloc(ctx->width * ctx->height * sizeof(struct PETE_FLASH));
 	}
 
-	for (uint64_t i = 0; i < ctx->width * ctx->height; i++)
+	for (uint64_t i = 0; i < ctx->width * ctx->height; ++i)
 	{
 		// Ensure that any valid node is lower than the
 		// down nodes at the start
@@ -89,7 +89,7 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 */
 void pete_free_ctx(PETE_CTX *ctx)
 {
-	for(uint8_t i = 0; i < 4; i++)
+	for(uint8_t i = 0; i < 4; ++i)
 	{
 		free(ctx->flashes_gen[i]);
 		free(ctx->flashes_red[i]);

@@ -286,7 +286,7 @@ static void push_flash(const int start, const int end, const bool is_red, const 
 static bool are_over_three_flashes_in_one_second(struct PETE_FLASH *const (*flashes)[4], const uint64_t idx, PETE_CTX *const ctx)
 {
 	// Check if there have been 3 flashes before checking if they happened in one second
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < 4; ++i)
 	{
 		// If start frame is negative for any flash, it means that there
 		// haven't been 3 flashes yet
