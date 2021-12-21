@@ -28,7 +28,7 @@
 
 void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
 void (*pete_notify_flash)(const struct PETE_FLASH flash, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx) = NULL;
-void (*pete_notify_over_three_flashes)(const uint64_t start, const uint64_t end, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_over_three_flashes)(const uint64_t start, const uint64_t end, const uint16_t x, const uint16_t y, PETE_CTX *ctx) = NULL;
 
 /*
 	Processes the next frame in a video.
@@ -279,7 +279,7 @@ static void push_flash(const int start, const int end, const bool is_red, const 
 	{
 		uint16_t x = idx % ctx->width;
 		uint16_t y = (idx - x) / ctx->width;
-		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, is_red, ctx);
+		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, ctx);
 	}
 }
 
