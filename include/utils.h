@@ -25,90 +25,66 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <math.h>
 
-// Used define bool instead of enum for performance
-#define PETE_DIR bool
-#define PETE_DIR_INC true
-#define PETE_DIR_DEC false
-
-enum channels
-{
-	RED,
-	GREEN,
-	BLUE,
-	ALPHA // Unused
-};
-
 /*----------------------------------------------------------------------------*/
 
-struct NODE
+// Color functionss
+
+/*
+	Gamma corrects an 8-bit (0-255) R, G or B value.
+	parameters:
+		value: the 8-bit R, G or B value to correct
+	returns: the gamma corrected R, G or B value (0-1)
+*/
+static double rgb8_to_gamma_corrected_rgb(uint8_t value)
 {
-	int frame;
+	double value01 = (double)value / 255.0;
 
-	double value;
+	double gamma_corrected = value01 <= 0.04045 ? value01 / 12.92 : pow((value01 + 0.055) / 1.055, 2.4);
 
-	// Unused for general flashes
-	bool saturated_red;
-};
+	return gamma_corrected;
+}
 
-struct TRANSITION
+/*
+	Calculates relative luminance from gamma corrected R, G and B values.
+	parameters:
+		r: gamma corrected R value
+		g: gamma corrected G value
+		b: gamma corrected B value
+	returns: the relative luminance value (0-1)
+*/
+static double rgb_to_luminance(double r, double g, double b)
 {
-	int start_frame, end_frame;
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
 
-	PETE_DIR direction;
-};
-
-struct FLASH
+/*
+	Calculates the value whose change is measured in testing for red flashes.
+	parameters:
+		r: gamma corrected R value
+		g: gamma corrected G value
+		b: gamma corrected B value
+	returns: the aforementioned value, max(0, (r-g-b)*320))
+*/
+static double rgb_to_red_flash_val(double r, double g, double b)
 {
-	int start_frame, end_frame;
-};
+	return fmax(0, (r-g-b)*320);
+}
 
-typedef struct PETE_CTX
+/*
+	Returns whether the given RGB color counts as a saturated red
+	parameters:
+		r: gamma corrected R value
+		g: gamma corrected G value
+		b: gamma corrected B value
+	returns: true if it's a saturated red and false if it's not
+*/
+static bool is_saturated_red(double r, double g, double b)
 {
-	uint16_t width, height;
-
-	// For non-integer fps, round up to the nearest integer
-	uint8_t fps;
-
-	// The current frame
-	uint64_t current_frame;
-
-	// Whether the frames will include an alpha channel or not
-	bool has_alpha;
-
-	// Nodes used as running counters of the highest
-	// and lowest points since the las transition
-	struct NODE *inc_nodes_gen, *dec_nodes_gen;
-	struct NODE *inc_nodes_red, *dec_nodes_red;
-	// Red nodes exclusively for saturated reds
-	struct NODE *inc_nodes_saturated_red, *dec_nodes_saturated_red;
-
-	// The last transition
-	// If its direction opposes a new transition, it's a flash
-	struct TRANSITION *last_transitions_gen;
-	struct TRANSITION *last_transitions_red;
-
-	// The last 4 general flashes
-	struct FLASH *flashes_gen[4];
-	// The last 4 red flashes
-	struct FLASH *flashes_red[4];
-} PETE_CTX;
-
-/*----------------------------------------------------------------------------*/
-
-// Video methods
-void alloc_nodes(PETE_CTX *ctx);
-void free_video(PETE_CTX *ctx);
-
-// Color methods
-double rgb8_to_gamma_corrected_rgb(uint8_t value);
-double rgb_to_luminance(double r, double g, double b);
-double rgb_to_red_flash_val(double r, double g, double b);
-bool is_saturated_red(double r, double g, double b);
+	return r / (r+g+b) >= 0.8;
+}
 
 #endif
