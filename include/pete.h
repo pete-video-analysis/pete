@@ -31,7 +31,7 @@
 
 /*----------------------------------------------------------------------------*/
 
-// User can define these functions as "listeners" for pete "events"
+// User can define these callback functions
 
 /*
 	Called when a frame has finished being processed.
