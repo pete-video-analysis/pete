@@ -27,8 +27,8 @@
 #include "utils.h"
 
 void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
-void (*pete_notify_flash)(const struct PETE_FLASH flash, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx) = NULL;
-void (*pete_notify_over_three_flashes)(const uint64_t start, const uint64_t end, const uint16_t x, const uint16_t y, PETE_CTX *ctx) = NULL;
+void (*pete_notify_flash)(const struct PETE_FLASH flash, const int x, const int y, const bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, PETE_CTX *ctx) = NULL;
 
 /*
 	Processes the next frame in a video.

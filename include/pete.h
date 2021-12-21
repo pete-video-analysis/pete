@@ -49,7 +49,7 @@ extern void (*pete_request_next_frame)(PETE_CTX *ctx);
 		is_red: whether the flash is a general flash or red flash.
 		ctx: pointer to the context in which the flash was detected. Can be used to distinguish between contexts.
 */
-extern void (*pete_notify_flash)(const struct PETE_FLASH flash, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx);
+extern void (*pete_notify_flash)(const struct PETE_FLASH flash, const int x, const int y, const bool is_red, PETE_CTX *ctx);
 
 /*
 	Called when more than three flashes are detected in a video within the span of a single second. This means a video is unsafe.
@@ -60,7 +60,7 @@ extern void (*pete_notify_flash)(const struct PETE_FLASH flash, const uint16_t x
 		y: the y position of the pixel in which the flashes were detected.
 		ctx: pointer to the context in which the flashes were detected. Can be used to distinguish between contexts.
 */
-extern void (*pete_notify_over_three_flashes)(const uint64_t start, const uint64_t end, const uint16_t x, const uint16_t y, PETE_CTX *ctx);
+extern void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, PETE_CTX *ctx);
 
 /*----------------------------------------------------------------------------*/
 
