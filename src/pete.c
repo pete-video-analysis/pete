@@ -36,7 +36,7 @@
 	returns:
 		the created and initialized PETE_CTX struct
 */
-PETE_CTX *pete_create_context(uint16_t width, uint16_t height, uint8_t fps, bool has_alpha)
+PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const uint8_t fps, const bool has_alpha)
 {
 	PETE_CTX *ctx = (PETE_CTX*)malloc(sizeof(PETE_CTX));
 	ctx->width = width;

@@ -29,12 +29,12 @@
 
 /*----------------------------------------------------------------------------*/
 
-static void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx, PETE_CTX *ctx);
-static bool is_luminance_transition(double low_val, double high_val);
-static bool is_red_transition(double low_val, bool low_sat, double high_val, bool high_sat);
-static bool is_flash(PETE_DIR current_transition_direction, bool is_red, uint64_t idx, PETE_CTX *ctx);
-static void push_flash(int start, int end, bool is_red, uint64_t idx, PETE_CTX *ctx);
-static bool are_over_three_flashes_in_one_second(struct PETE_FLASH * (*flashes)[4], uint64_t idx, PETE_CTX *ctx);
-static void push_transition(int start_frame, int end_frame, PETE_DIR dir, bool is_red, uint64_t idx, PETE_CTX *ctx);
+static void process_pixel(const uint8_t red, const uint8_t green, const uint8_t blue, const uint64_t idx, PETE_CTX *const ctx);
+static bool is_luminance_transition(const double low_val, const double high_val);
+static bool is_red_transition(const double low_val, const bool low_sat, const double high_val, const bool high_sat);
+static bool is_flash(const PETE_DIR current_transition_direction, const bool is_red, const uint64_t idx, PETE_CTX *const ctx);
+static void push_flash(const int start, const int end, const bool is_red, const uint64_t idx, PETE_CTX *const ctx);
+static bool are_over_three_flashes_in_one_second(struct PETE_FLASH *const (*flashes)[4], const uint64_t idx, PETE_CTX *const ctx);
+static void push_transition(const int start_frame, const int end_frame, const PETE_DIR dir, const bool is_red, const uint64_t idx, PETE_CTX *const ctx);
 
 #endif

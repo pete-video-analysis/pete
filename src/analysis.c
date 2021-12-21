@@ -27,8 +27,8 @@
 #include "utils.h"
 
 void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
-void (*pete_notify_flash)(struct PETE_FLASH* flash, uint16_t x, uint16_t y, bool is_red, PETE_CTX *ctx) = NULL;
-void (*pete_notify_over_three_flashes)(uint64_t start, uint64_t end, uint16_t x, uint16_t y, bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_flash)(const struct PETE_FLASH flash, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_over_three_flashes)(const uint64_t start, const uint64_t end, const uint16_t x, const uint16_t y, const bool is_red, PETE_CTX *ctx) = NULL;
 
 /*
 	Processes the next frame in a video.
@@ -36,7 +36,7 @@ void (*pete_notify_over_three_flashes)(uint64_t start, uint64_t end, uint16_t x,
 		data: pointer to the frame buffer for the received frame, in RGB8 or RGBA8 format. POINTER IS NOT FREED INSIDE THIS METHOD!!
 		ctx: pointer to the context allocated for the analysis of the video
 */
-void pete_receive_frame(uint8_t *data, PETE_CTX *ctx)
+void pete_receive_frame(uint8_t *const data, PETE_CTX *const ctx)
 {
 	uint64_t channels = ctx->has_alpha ? 4 : 3;
 	// Process each pixel
@@ -63,7 +63,7 @@ void pete_receive_frame(uint8_t *data, PETE_CTX *ctx)
 		pete_request_next_frame(ctx);
 }
 
-static void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx, PETE_CTX *ctx)
+static void process_pixel(const uint8_t red, const uint8_t green, const uint8_t blue, const uint64_t idx, PETE_CTX *const ctx)
 {
 	double R = rgb8_to_gamma_corrected_rgb(red);
 	double G = rgb8_to_gamma_corrected_rgb(green);
@@ -231,20 +231,20 @@ static void process_pixel(uint8_t red, uint8_t green, uint8_t blue, uint64_t idx
 	}
 }
 
-static bool is_luminance_transition(double low_val, double high_val)
+static bool is_luminance_transition(const double low_val, const double high_val)
 {
 	if(high_val == 0.0) return false;
 	return high_val - low_val >= 0.1 && low_val < 0.8;
 }
 
-static bool is_red_transition(double low_val, bool low_sat, double high_val, bool high_sat)
+static bool is_red_transition(const double low_val, const bool low_sat, const double high_val, const bool high_sat)
 {
 	if(high_val == 0.0) return false;
 	if(!low_sat && !high_sat) return false;
 	return high_val - low_val > 20.0;
 }
 
-static bool is_flash(PETE_DIR current_transition_direction, bool is_red, uint64_t idx, PETE_CTX *ctx)
+static bool is_flash(const PETE_DIR current_transition_direction, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
 {
 	struct PETE_TRANSITION last_transition = is_red ? ctx->last_transitions_red[idx] : ctx->last_transitions_gen[idx];
 
@@ -257,7 +257,7 @@ static bool is_flash(PETE_DIR current_transition_direction, bool is_red, uint64_
 	return true;
 }
 
-static void push_flash(int start, int end, bool is_red, uint64_t idx, PETE_CTX *ctx)
+static void push_flash(const int start, const int end, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
 {
 	struct PETE_FLASH * (*flashes)[4] = is_red ? &(ctx->flashes_red) : &(ctx->flashes_gen);
 
@@ -271,7 +271,7 @@ static void push_flash(int start, int end, bool is_red, uint64_t idx, PETE_CTX *
 	{
 		uint16_t x = idx % ctx->width;
 		uint16_t y = (idx - x) / ctx->width;
-		struct PETE_FLASH *flash = &((*flashes)[0][idx]);
+		struct PETE_FLASH flash = (*flashes)[0][idx];
 		pete_notify_flash(flash, x, y, is_red, ctx);
 	}
 
@@ -283,7 +283,7 @@ static void push_flash(int start, int end, bool is_red, uint64_t idx, PETE_CTX *
 	}
 }
 
-static bool are_over_three_flashes_in_one_second(struct PETE_FLASH * (*flashes)[4], uint64_t idx, PETE_CTX *ctx)
+static bool are_over_three_flashes_in_one_second(struct PETE_FLASH *const (*flashes)[4], const uint64_t idx, PETE_CTX *const ctx)
 {
 	// Check if there have been 3 flashes before checking if they happened in one second
 	for(int i = 0; i < 4; i++)
@@ -298,7 +298,7 @@ static bool are_over_three_flashes_in_one_second(struct PETE_FLASH * (*flashes)[
 	return time_span <= ctx->fps;
 }
 
-static void push_transition(int start_frame, int end_frame, PETE_DIR dir, bool is_red, uint64_t idx, PETE_CTX *ctx)
+static void push_transition(const int start_frame, const int end_frame, const PETE_DIR dir, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
 {
 	struct PETE_TRANSITION *last_transitions = is_red ? ctx->last_transitions_red : ctx->last_transitions_gen;
 
