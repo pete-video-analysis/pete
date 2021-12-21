@@ -13,6 +13,8 @@ static: build/libpete.a
 	
 shared: build/libpete.so
 
+objects: build/main.o
+
 build/main.o: $(obj_files)
 	@# Link into single object file before stripping symbols
 	$(LD) -Ur -o build/main.o $(obj_files)
@@ -22,10 +24,10 @@ build/main.o: $(obj_files)
 build/%.o: src/%.c
 	$(CC) -Iinclude $(CFLAGS) -c $< -o $@
 
-build/libpete.a: build/main.o
+build/libpete.a: objects
 	ar rc build/libpete.a build/main.o
 
-build/libpete.so: build/main.o
+build/libpete.so: objects
 	$(CC) -shared -o build/libpete.so build/main.o -l$(CLIBS)
 
 clean:
