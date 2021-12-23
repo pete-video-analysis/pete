@@ -22,7 +22,8 @@
 	SOFTWARE.
 */
 
-#include <stddef.h>
+//#include <stddef.h>
+#define NULL 0 // stddef can be missing on windows??? I hate windows.
 #include "analysis.h"
 #include "utils.h"
 
