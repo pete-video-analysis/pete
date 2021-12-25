@@ -1,5 +1,19 @@
+# Detect platform
+ifeq ($(OS),Windows_NT)
+	object := obj
+	static := lib
+	shared := dll
+else
+	object := o
+	static := a
+	shared := so
+endif
+
+# Use only gcc
+CC := gcc
+
 source_files := $(wildcard src/*.c)
-obj_files := $(source_files:src/%.c=build/%.o)
+obj_files := $(source_files:src/%.c=build/%.$(object))
 
 # utils.h requires the math library
 CLIBS  := m
@@ -9,28 +23,28 @@ CFLAGS := -fPIC -l$(CLIBS)
 
 all: static shared
 
-static: build/libpete.a
+static: build/libpete.$(static)
 	
-shared: build/libpete.so
+shared: build/libpete.$(shared)
 
-objects: build/main.o
+objects: build/main.$(object)
 
-build/main.o: $(obj_files)
-	@# Link into single object file before stripping symbols
-	$(LD) -Ur -o build/main.o $(obj_files)
-	@# Remove all static methods (non-api symbols)
-	objcopy --strip-unneeded build/main.o build/main.o
+# Link into single object file before stripping symbols
+# Then remove all static methods (non-api symbols)
+build/main.$(object): $(obj_files)
+	$(LD) -Ur -o build/main.$(object) $(obj_files)
+	objcopy --strip-unneeded build/main.$(object) build/main.$(object)
 	
-build/%.o: src/%.c
+build/%.$(object): src/%.c
 	$(CC) -Iinclude $(CFLAGS) -c $< -o $@
 
-build/libpete.a: objects
-	ar rc build/libpete.a build/main.o
+build/libpete.$(static): objects
+	ar rc build/libpete.$(static) build/main.$(object)
 
-build/libpete.so: objects
-	$(CC) -shared -o build/libpete.so build/main.o -l$(CLIBS)
+build/libpete.$(shared): objects
+	$(CC) -shared -o build/libpete.$(shared) build/main.$(object) -l$(CLIBS)
 
 clean:
 	rm $(obj_files)
-	rm build/libpete.a
-	rm build/libpete.so
+	rm build/libpete.$(static)
+	rm build/libpete.$(shared)
