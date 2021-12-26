@@ -27,7 +27,12 @@
 #ifndef PETE_H
 #define PETE_H
 
-#include "types.h"
+#include <stdbool.h>
+#include <stdint.h>
+
+/*----------------------------------------------------------------------------*/
+
+typedef struct PETE_CTX PETE_CTX;
 
 /*----------------------------------------------------------------------------*/
 
@@ -43,13 +48,14 @@ extern void (*pete_request_next_frame)(PETE_CTX *ctx);
 /*
 	Called when a flash is detected in a video. Flashes are common and don't mean a video is unsafe.
 	parameters:
-		flash: pointer to the flash struct, containing the start and end frame.
+		start: the start frame of the flash.
+		end: the end frame of the flash.
 		x: the x position of the pixel in which the flash was detected.
 		y: the y position of the pixel in which the flash was detected.
 		is_red: whether the flash is a general flash or red flash.
 		ctx: pointer to the context in which the flash was detected. Can be used to distinguish between contexts.
 */
-extern void (*pete_notify_flash)(const struct PETE_FLASH flash, const int x, const int y, const bool is_red, PETE_CTX *ctx);
+extern void (*pete_notify_flash)(const int start, const int end, const int x, const int y, const bool is_red, PETE_CTX *ctx);
 
 /*
 	Called when more than three flashes are detected in a video within the span of a single second. This means a video is unsafe.

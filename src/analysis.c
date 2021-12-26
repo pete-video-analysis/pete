@@ -27,7 +27,7 @@
 #include "utils.h"
 
 void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
-void (*pete_notify_flash)(const struct PETE_FLASH flash, const int x, const int y, const bool is_red, PETE_CTX *ctx) = NULL;
+void (*pete_notify_flash)(const int start, const int end, const int x, const int y, const bool is_red, PETE_CTX *ctx) = NULL;
 void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, PETE_CTX *ctx) = NULL;
 
 /*
@@ -272,7 +272,7 @@ static void push_flash(const int start, const int end, const bool is_red, const 
 		uint16_t x = idx % ctx->width;
 		uint16_t y = (idx - x) / ctx->width;
 		struct PETE_FLASH flash = (*flashes)[0][idx];
-		pete_notify_flash(flash, x, y, is_red, ctx);
+		pete_notify_flash(flash.start_frame, flash.end_frame, x, y, is_red, ctx);
 	}
 
 	if(are_over_three_flashes_in_one_second(flashes, idx, ctx) && pete_notify_over_three_flashes != NULL)

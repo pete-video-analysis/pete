@@ -24,6 +24,7 @@
 
 #include "pete.h"
 #include "utils.h"
+#include "types.h"
 #include <stdlib.h>
 
 /*
