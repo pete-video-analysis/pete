@@ -8,9 +8,9 @@ In this repository resides the main engine. It can't be run on its own, it's a l
 
 ## Building
 
-**WARNING: Building only works on linux so far. Feel free to contribute with a build system for your platform and/or report errors.**
-
 Currently, Pete uses the [Make](https://www.gnu.org/software/make/) build system.
+
+If you're on Windows, use GNU Make and not NMake. Also make sure you have the [gcc](https://gcc.gnu.org/) compiler. You can get it from the [MinGW](https://sourceforge.net/projects/mingw/) or [MinGW-w64](https://www.mingw-w64.org/) projects.
 
  - Static library: run `make static`
  - Shared library: run `make shared`
