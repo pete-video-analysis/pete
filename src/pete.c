@@ -45,38 +45,26 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 	ctx->fps = fps;
 	ctx->has_alpha = has_alpha;
 	
-	// Alocate as many nodes and flashes as pixels per frame.
-	ctx->inc_nodes_gen           = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->dec_nodes_gen           = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->inc_nodes_red           = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->dec_nodes_red           = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->inc_nodes_saturated_red = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->dec_nodes_saturated_red = (struct PETE_NODE*)       malloc(ctx->width * ctx->height * sizeof(struct PETE_NODE));
-	ctx->last_transitions_gen    = (struct PETE_TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct PETE_TRANSITION));
-	ctx->last_transitions_red    = (struct PETE_TRANSITION*) malloc(ctx->width * ctx->height * sizeof(struct PETE_TRANSITION));
-
-	for(uint8_t i = 0; i < 4; ++i)
-	{
-		ctx->flashes_gen[i] = (struct PETE_FLASH*) malloc(ctx->width * ctx->height * sizeof(struct PETE_FLASH));
-		ctx->flashes_red[i] = (struct PETE_FLASH*) malloc(ctx->width * ctx->height * sizeof(struct PETE_FLASH));
-	}
+	// Alocate pixels
+	ctx->pixels = (struct PETE_PIX*) malloc(width * height * sizeof(struct PETE_PIX));
 
 	for (uint64_t i = 0; i < ctx->width * ctx->height; ++i)
 	{
+		struct PETE_PIX *pixel = &(ctx->pixels[i]);
 		// Ensure that any valid node is lower than the
 		// down nodes at the start
-		ctx->dec_nodes_gen[i].value = 1.1;
-		ctx->dec_nodes_red[i].value = 1.1;
-		ctx->dec_nodes_saturated_red[i].value = 1.1;
+		pixel->dec_node_gen.value = 1.1;
+		pixel->dec_node_red.value = 1.1;
+		pixel->dec_node_sat_red.value = 1.1;
 
-		ctx->last_transitions_gen[i].start_frame = -1;
-		ctx->last_transitions_red[i].start_frame = -1;
+		pixel->last_trans_gen.start_frame = -1;
+		pixel->last_trans_red.start_frame = -1;
 
 		// Initialize flashes with negative start frames
 		for(int j = 0; j < 3; j++)
 		{
-			ctx->flashes_gen[j][i].start_frame = -1;
-			ctx->flashes_red[j][i].start_frame = -1;
+			pixel->flashes_gen[j].start_frame = -1;
+			pixel->flashes_red[j].start_frame = -1;
 		}
 	}
 
@@ -90,18 +78,6 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 */
 void pete_free_ctx(PETE_CTX *ctx)
 {
-	for(uint8_t i = 0; i < 4; ++i)
-	{
-		free(ctx->flashes_gen[i]);
-		free(ctx->flashes_red[i]);
-	}
-	free(ctx->inc_nodes_gen);
-	free(ctx->dec_nodes_gen);
-	free(ctx->inc_nodes_red);
-	free(ctx->dec_nodes_red);
-	free(ctx->inc_nodes_saturated_red);
-	free(ctx->dec_nodes_saturated_red);
-	free(ctx->last_transitions_gen);
-	free(ctx->last_transitions_red);
+	free(ctx->pixels);
 	free(ctx);
 }

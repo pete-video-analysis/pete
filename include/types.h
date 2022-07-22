@@ -39,11 +39,12 @@ enum
 };
 
 // Define PETE_DIR type as enum
-typedef enum
+enum
 {
 	PETE_DIR_DEC,
 	PETE_DIR_INC
-} PETE_DIR;
+};
+typedef uint8_t PETE_DIR;
 
 /*----------------------------------------------------------------------------*/
 
@@ -69,6 +70,23 @@ struct PETE_FLASH
 	int start_frame, end_frame;
 };
 
+struct PETE_PIX
+{
+	// Nodes used as running counters of the highest
+	// and lowest points since the las transition
+	struct PETE_NODE inc_node_gen, dec_node_gen;
+	struct PETE_NODE inc_node_red, dec_node_red;
+	// Red nodes exclusively for saturated reds
+	struct PETE_NODE inc_node_sat_red, dec_node_sat_red;
+
+	// The last transition
+	// If its direction opposes a new transition, it's a flash
+	struct PETE_TRANSITION last_trans_gen, last_trans_red;
+
+	// The last 4 general and red flashes
+	struct PETE_FLASH flashes_gen[4], flashes_red[4];
+};
+
 // Typedef PETE_CTX as it's user facing
 typedef struct PETE_CTX
 {
@@ -77,28 +95,14 @@ typedef struct PETE_CTX
 	// For non-integer fps, round up to the nearest integer
 	uint8_t fps;
 
-	// The current frame
-	uint64_t current_frame;
-
 	// Whether the frames will include an alpha channel or not
 	bool has_alpha;
 
-	// Nodes used as running counters of the highest
-	// and lowest points since the las transition
-	struct PETE_NODE *inc_nodes_gen, *dec_nodes_gen;
-	struct PETE_NODE *inc_nodes_red, *dec_nodes_red;
-	// Red nodes exclusively for saturated reds
-	struct PETE_NODE *inc_nodes_saturated_red, *dec_nodes_saturated_red;
+	// The current frame
+	uint64_t current_frame;
 
-	// The last transition
-	// If its direction opposes a new transition, it's a flash
-	struct PETE_TRANSITION *last_transitions_gen;
-	struct PETE_TRANSITION *last_transitions_red;
-
-	// The last 4 general flashes
-	struct PETE_FLASH *flashes_gen[4];
-	// The last 4 red flashes
-	struct PETE_FLASH *flashes_red[4];
+	// Dynamic array of pixels
+	struct PETE_PIX *pixels;
 } PETE_CTX;
 
 #endif

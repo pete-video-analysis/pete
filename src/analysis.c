@@ -26,9 +26,9 @@
 #include "analysis.h"
 #include "utils.h"
 
-void (*pete_request_next_frame)(PETE_CTX *ctx) = NULL;
-void (*pete_notify_flash)(const int start, const int end, const int x, const int y, const bool is_red, PETE_CTX *ctx) = NULL;
-void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, PETE_CTX *ctx) = NULL;
+void (*pete_request_next_frame)(const PETE_CTX *const ctx) = NULL;
+void (*pete_notify_flash)(const int start, const int end, const int x, const int y, const bool is_red, const PETE_CTX *const ctx) = NULL;
+void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, const PETE_CTX *const ctx) = NULL;
 
 /*
 	Processes the next frame in a video.
@@ -44,14 +44,14 @@ void pete_receive_frame(uint8_t *const data, PETE_CTX *const ctx)
 	{
 		for(uint64_t x = 0; x < ctx->width; x++)
 		{
-			uint64_t node_index = (y * (uint64_t)ctx->width) + x;
-			uint64_t data_index = node_index * channels;
+			uint64_t pixel_index = (y * (uint64_t)ctx->width) + x;
+			uint64_t data_index = pixel_index * channels;
 
 			process_pixel(
 				data[data_index + PETE_CHANNEL_R],
 				data[data_index + PETE_CHANNEL_G],
 				data[data_index + PETE_CHANNEL_B],
-				node_index,
+				pixel_index,
 				ctx
 			);
 		}
@@ -72,162 +72,156 @@ static void process_pixel(const uint8_t red, const uint8_t green, const uint8_t 
 	// General flashes
 	double relative_luminance = rgb_to_luminance(R, G, B);
 	
-	struct PETE_NODE *current_inc = &(ctx->inc_nodes_gen[idx]);
-	struct PETE_NODE *current_dec = &(ctx->dec_nodes_gen[idx]);
+	struct PETE_PIX *const pixel = &(ctx->pixels[idx]);
 
-	if(is_luminance_transition(current_dec->value, relative_luminance))
+	if(is_luminance_transition(pixel->dec_node_gen.value, relative_luminance))
 	{	
-		if(is_flash(PETE_DIR_INC, false, idx, ctx))
+		if(is_flash(PETE_DIR_INC, pixel->last_trans_gen))
 		{
-			push_flash(ctx->last_transitions_gen[idx].start_frame, ctx->current_frame, false, idx, ctx);
+			push_flash(pixel->last_trans_gen.start_frame, ctx->current_frame, pixel->flashes_gen, false, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, false, idx, ctx);
+		push_transition(pixel->dec_node_gen.frame, ctx->current_frame, PETE_DIR_INC, &pixel->last_trans_gen);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = relative_luminance,
 			.saturated_red = false // unused
 		};
-		*current_dec = *current_inc = current;
+		pixel->inc_node_gen = pixel->dec_node_gen = current;
 	}
-	else if(is_luminance_transition(relative_luminance, current_inc->value))
+	else if(is_luminance_transition(relative_luminance, pixel->inc_node_gen.value))
 	{
-		if(is_flash(PETE_DIR_DEC, false, idx, ctx))
+		if(is_flash(PETE_DIR_DEC, pixel->last_trans_gen))
 		{
-			push_flash(ctx->last_transitions_gen[idx].start_frame, ctx->current_frame, false, idx, ctx);
+			push_flash(pixel->last_trans_gen.start_frame, ctx->current_frame, pixel->flashes_gen, false, idx, ctx);
 		}
 
-		push_transition(current_inc->frame, ctx->current_frame, PETE_DIR_DEC, false, idx, ctx);
+		push_transition(pixel->inc_node_gen.frame, ctx->current_frame, PETE_DIR_DEC, &pixel->last_trans_gen);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = relative_luminance,
 			.saturated_red = false // unused
 		};
-		*current_dec = *current_inc = current;
+		pixel->inc_node_gen = pixel->dec_node_gen = current;
 	}
 
-	if(relative_luminance >= current_inc->value)
+	if(relative_luminance >= pixel->inc_node_gen.value)
 	{
-		current_inc->frame = ctx->current_frame;
-		current_inc->value = relative_luminance;
+		pixel->inc_node_gen.frame = ctx->current_frame;
+		pixel->inc_node_gen.value = relative_luminance;
 	}
 
-	if(relative_luminance <= current_dec->value)
+	if(relative_luminance <= pixel->dec_node_gen.value)
 	{
-		current_dec->frame = ctx->current_frame;
-		current_dec->value = relative_luminance;
+		pixel->dec_node_gen.frame = ctx->current_frame;
+		pixel->dec_node_gen.value = relative_luminance;
 	}
 
 	// Red flashes
 	double red_flash_val = rgb_to_red_flash_val(R, G, B);
 	bool is_saturated = is_saturated_red(R, G, B);
 
-	current_inc = &(ctx->inc_nodes_red[idx]);
-	current_dec = &(ctx->dec_nodes_red[idx]);
-	struct PETE_NODE *current_saturated_inc = &(ctx->inc_nodes_saturated_red[idx]);
-	struct PETE_NODE *current_saturated_dec = &(ctx->dec_nodes_saturated_red[idx]);
-
-	if(is_red_transition(current_dec->value, current_dec->saturated_red, red_flash_val, is_saturated))
+	if(is_red_transition(pixel->dec_node_red.value, pixel->dec_node_red.saturated_red, red_flash_val, is_saturated))
 	{
-		if(is_flash(PETE_DIR_INC, true, idx, ctx))
+		if(is_flash(PETE_DIR_INC, pixel->last_trans_red))
 		{
-			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
+			push_flash(pixel->last_trans_red.start_frame, ctx->current_frame, pixel->flashes_red, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, true, idx, ctx);
+		push_transition(pixel->dec_node_red.frame, ctx->current_frame, PETE_DIR_INC, &pixel->last_trans_red);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
-		*current_dec = *current_inc = current;
-		*current_saturated_dec = *current_saturated_inc = current;
-		current_saturated_dec->saturated_red = true;
-		current_saturated_inc->saturated_red = true;
+		pixel->dec_node_red = pixel->inc_node_red = current;
+		pixel->dec_node_sat_red = pixel->inc_node_sat_red = current;
+		pixel->dec_node_sat_red.saturated_red = true;
+		pixel->inc_node_sat_red.saturated_red = true;
 	}
-	else if(is_red_transition(red_flash_val, is_saturated, current_inc->value, current_inc->saturated_red))
+	else if(is_red_transition(red_flash_val, is_saturated, pixel->inc_node_red.value, pixel->inc_node_red.saturated_red))
 	{
-		if(is_flash(PETE_DIR_DEC, true, idx, ctx))
+		if(is_flash(PETE_DIR_DEC, pixel->last_trans_red))
 		{
-			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
+			push_flash(pixel->last_trans_red.start_frame, ctx->current_frame, pixel->flashes_red, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_DEC, true, idx, ctx);
+		push_transition(pixel->inc_node_red.frame, ctx->current_frame, PETE_DIR_DEC, &pixel->last_trans_red);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
-		*current_dec = *current_inc = current;
-		*current_saturated_dec = *current_saturated_inc = current;
-		current_saturated_dec->saturated_red = true;
-		current_saturated_inc->saturated_red = true;
+		pixel->dec_node_red = pixel->inc_node_red = current;
+		pixel->dec_node_sat_red = pixel->inc_node_sat_red = current;
+		pixel->dec_node_sat_red.saturated_red = true;
+		pixel->inc_node_sat_red.saturated_red = true;
 	}
-	else if(is_red_transition(current_saturated_dec->value, true, red_flash_val, is_saturated))
+	else if(is_red_transition(pixel->dec_node_sat_red.value, true, red_flash_val, is_saturated))
 	{
-		if(is_flash(PETE_DIR_INC, true, idx, ctx))
+		if(is_flash(PETE_DIR_INC, pixel->last_trans_red))
 		{
-			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
+			push_flash(pixel->last_trans_red.start_frame, ctx->current_frame, pixel->flashes_red, true, idx, ctx);
 		}
 
-		push_transition(current_dec->frame, ctx->current_frame, PETE_DIR_INC, true, idx, ctx);
+		push_transition(pixel->dec_node_sat_red.frame, ctx->current_frame, PETE_DIR_INC, &pixel->last_trans_red);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
-		*current_dec = *current_inc = current;
-		*current_saturated_dec = *current_saturated_inc = current;
-		current_saturated_dec->saturated_red = true;
-		current_saturated_inc->saturated_red = true;
+		pixel->dec_node_red = pixel->inc_node_red = current;
+		pixel->dec_node_sat_red = pixel->inc_node_sat_red = current;
+		pixel->dec_node_sat_red.saturated_red = true;
+		pixel->inc_node_sat_red.saturated_red = true;
 	}
-	else if(is_red_transition(red_flash_val, is_saturated, current_saturated_inc->value, true))
+	else if(is_red_transition(red_flash_val, is_saturated, pixel->inc_node_sat_red.value, true))
 	{
-		if(is_flash(PETE_DIR_DEC, true, idx, ctx))
+		if(is_flash(PETE_DIR_DEC, pixel->last_trans_red))
 		{
-			push_flash(ctx->last_transitions_red[idx].start_frame, ctx->current_frame, true, idx, ctx);
+			push_flash(pixel->last_trans_red.start_frame, ctx->current_frame, pixel->flashes_red, true, idx, ctx);
 		}
 
-		push_transition(current_saturated_dec->frame, ctx->current_frame, PETE_DIR_DEC, true, idx, ctx);
+		push_transition(pixel->inc_node_sat_red.frame, ctx->current_frame, PETE_DIR_DEC, &pixel->last_trans_red);
 		// Reset nodes
 		struct PETE_NODE current = {
 			.frame = ctx->current_frame,
 			.value = red_flash_val,
 			.saturated_red = is_saturated
 		};
-		*current_dec = *current_inc = current;
-		*current_saturated_dec = *current_saturated_inc = current;
-		current_saturated_dec->saturated_red = true;
-		current_saturated_inc->saturated_red = true;
+		pixel->dec_node_red = pixel->inc_node_red = current;
+		pixel->dec_node_sat_red = pixel->inc_node_sat_red = current;
+		pixel->dec_node_sat_red.saturated_red = true;
+		pixel->inc_node_sat_red.saturated_red = true;
 	}
 
-	if(red_flash_val >= current_inc->value)
+	if(red_flash_val >= pixel->inc_node_red.value)
 	{
-		current_inc->frame = ctx->current_frame;
-		current_inc->value = red_flash_val;
+		pixel->inc_node_red.frame = ctx->current_frame;
+		pixel->inc_node_red.value = red_flash_val;
 	}
 
-	if(red_flash_val <= current_dec->value)
+	if(red_flash_val <= pixel->dec_node_red.value)
 	{
-		current_dec->frame = ctx->current_frame;
-		current_dec->value = red_flash_val;
+		pixel->dec_node_red.frame = ctx->current_frame;
+		pixel->dec_node_red.value = red_flash_val;
 	}
 
-	if(red_flash_val >= current_saturated_inc->value && is_saturated)
+	if(red_flash_val >= pixel->inc_node_sat_red.value && is_saturated)
 	{
-		current_saturated_inc->frame = ctx->current_frame;
-		current_saturated_inc->value = red_flash_val;
+		pixel->inc_node_sat_red.frame = ctx->current_frame;
+		pixel->inc_node_sat_red.value = red_flash_val;
 	}
 
-	if(red_flash_val <= current_saturated_dec->value && is_saturated)
+	if(red_flash_val <= pixel->dec_node_sat_red.value && is_saturated)
 	{
-		current_saturated_dec->frame = ctx->current_frame;
-		current_saturated_dec->value = red_flash_val;
+		pixel->dec_node_sat_red.frame = ctx->current_frame;
+		pixel->dec_node_sat_red.value = red_flash_val;
 	}
 }
 
@@ -244,65 +238,59 @@ static bool is_red_transition(const double low_val, const bool low_sat, const do
 	return high_val - low_val > 20.0;
 }
 
-static bool is_flash(const PETE_DIR current_transition_direction, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
+static bool is_flash(const PETE_DIR current_transition_direction, const struct PETE_TRANSITION last_trans)
 {
-	struct PETE_TRANSITION last_transition = is_red ? ctx->last_transitions_red[idx] : ctx->last_transitions_gen[idx];
-
-	if(last_transition.direction == current_transition_direction)
+	if(last_trans.direction == current_transition_direction)
 		return false;
 		
-	if(last_transition.start_frame == -1)
+	if(last_trans.start_frame == -1)
 		return false;
 
 	return true;
 }
 
-static void push_flash(const int start, const int end, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
+static void push_flash(const int start, const int end, struct PETE_FLASH flashes[4], const bool is_red, const int idx, const PETE_CTX *const ctx)
 {
-	struct PETE_FLASH * (*flashes)[4] = is_red ? &(ctx->flashes_red) : &(ctx->flashes_gen);
-
-	(*flashes)[3][idx] = (*flashes)[2][idx];
-	(*flashes)[2][idx] = (*flashes)[1][idx];
-	(*flashes)[1][idx] = (*flashes)[0][idx];
-	(*flashes)[0][idx].start_frame = start;
-	(*flashes)[0][idx].end_frame = end;
+	flashes[3] = flashes[2];
+	flashes[2] = flashes[1];
+	flashes[1] = flashes[0];
+	flashes[0].start_frame = start;
+	flashes[0].end_frame = end;
 
 	if(pete_notify_flash != NULL)
 	{
 		uint16_t x = idx % ctx->width;
 		uint16_t y = (idx - x) / ctx->width;
-		struct PETE_FLASH flash = (*flashes)[0][idx];
+		struct PETE_FLASH flash = flashes[0];
 		pete_notify_flash(flash.start_frame, flash.end_frame, x, y, is_red, ctx);
 	}
 
-	if(are_over_three_flashes_in_one_second(flashes, idx, ctx) && pete_notify_over_three_flashes != NULL)
+	if(are_over_three_flashes_in_one_second(flashes, ctx) && pete_notify_over_three_flashes != NULL)
 	{
 		uint16_t x = idx % ctx->width;
 		uint16_t y = (idx - x) / ctx->width;
-		pete_notify_over_three_flashes((*flashes)[3][idx].start_frame, (*flashes)[0][idx].end_frame, x, y, ctx);
+		pete_notify_over_three_flashes(flashes[3].start_frame, flashes[0].end_frame, x, y, ctx);
 	}
 }
 
-static bool are_over_three_flashes_in_one_second(struct PETE_FLASH *const (*flashes)[4], const uint64_t idx, PETE_CTX *const ctx)
+static bool are_over_three_flashes_in_one_second(struct PETE_FLASH flashes[4], const PETE_CTX *const ctx)
 {
 	// Check if there have been 3 flashes before checking if they happened in one second
 	for(int i = 0; i < 4; ++i)
 	{
 		// If start frame is negative for any flash, it means that there
 		// haven't been 3 flashes yet
-		if((*flashes)[i][idx].start_frame < 0) return false;
+		if(flashes[i].start_frame < 0) return false;
 	}
 
-	int time_span = (*flashes)[0][idx].end_frame - (*flashes)[3][idx].start_frame;
+	int time_span = flashes[0].end_frame - flashes[3].start_frame;
 	
 	return time_span <= ctx->fps;
 }
 
-static void push_transition(const int start_frame, const int end_frame, const PETE_DIR dir, const bool is_red, const uint64_t idx, PETE_CTX *const ctx)
+static void push_transition(const int start_frame, const int end_frame, const PETE_DIR dir, struct PETE_TRANSITION *const last_trans)
 {
-	struct PETE_TRANSITION *last_transitions = is_red ? ctx->last_transitions_red : ctx->last_transitions_gen;
-
-	last_transitions[idx].start_frame = start_frame;
-	last_transitions[idx].end_frame = end_frame;
-	last_transitions[idx].direction = dir;
+	last_trans->start_frame = start_frame;
+	last_trans->end_frame = end_frame;
+	last_trans->direction = dir;
 }
