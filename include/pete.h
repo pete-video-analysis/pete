@@ -64,9 +64,10 @@ extern void (*pete_notify_flash)(const int start, const int end, const int x, co
 		end: the end frame of the newest flash.
 		x: the x position of the pixel in which the flashes were detected.
 		y: the y position of the pixel in which the flashes were detected.
+		is_red: whether the flashes are general flashes or red flashes.
 		ctx: pointer to the context in which the flashes were detected. Can be used to distinguish between contexts.
 */
-extern void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, const PETE_CTX *const ctx);
+extern void (*pete_notify_over_three_flashes)(const int start, const int end, const int x, const int y, const bool is_red, const PETE_CTX *const ctx);
 
 /*----------------------------------------------------------------------------*/
 
