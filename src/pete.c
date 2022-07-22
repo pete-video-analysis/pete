@@ -26,6 +26,7 @@
 #include "utils.h"
 #include "types.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 /*
 	Creates a context struct, allocates the pointers within it and initializes necessary elements
@@ -40,6 +41,12 @@
 PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const uint8_t fps, const bool has_alpha)
 {
 	PETE_CTX *ctx = (PETE_CTX*)malloc(sizeof(PETE_CTX));
+	if(ctx == NULL)
+	{
+		fprintf(stderr, "Pete error: could not allocate context.\n");
+		return NULL;
+	}
+
 	ctx->width = width;
 	ctx->height = height;
 	ctx->fps = fps;
@@ -47,6 +54,12 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 	
 	// Alocate pixels
 	ctx->pixels = (struct PETE_PIX*) malloc(width * height * sizeof(struct PETE_PIX));
+	if(ctx->pixels == NULL)
+	{
+		fprintf(stderr, "Pete error: could not allocate pixel array. Video resolution (%ux%u) may be too large.\n", width, height);
+		free(ctx);
+		return NULL;
+	}
 
 	for (uint64_t i = 0; i < ctx->width * ctx->height; ++i)
 	{
@@ -78,6 +91,6 @@ PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const
 */
 void pete_free_ctx(PETE_CTX *ctx)
 {
-	free(ctx->pixels);
-	free(ctx);
+	if(ctx->pixels != NULL) free(ctx->pixels);
+	if(ctx != NULL) free(ctx);
 }

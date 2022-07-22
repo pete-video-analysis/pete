@@ -38,6 +38,8 @@ void (*pete_notify_over_three_flashes)(const int start, const int end, const int
 */
 void pete_receive_frame(uint8_t *const data, PETE_CTX *const ctx)
 {
+	if(data == NULL || ctx == NULL) return;
+
 	uint64_t channels = ctx->has_alpha ? 4 : 3;
 	// Process each pixel
 	for(uint64_t y = 0; y < ctx->height; y++)
