@@ -36,7 +36,7 @@
 		fps: the fps (frames per second) of the video being analyzed (for non-integer fps, round to nearest integer)
 		has_alpha: whether the frame buffers corresponding to the video being analyzed include an alpha channel
 	returns:
-		the created and initialized PETE_CTX struct
+		the created and initialized PETE_CTX struct (may return NULL)
 */
 PETE_CTX *pete_create_context(const uint16_t width, const uint16_t height, const uint8_t fps, const bool has_alpha)
 {
